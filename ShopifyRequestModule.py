@@ -2,8 +2,19 @@
 """
 
 ShopifyRequestModule.py
+
 - Modularizing Shopify carts.
 - First developing series of basic frequently used methods.
+
+Resources:
+
+https://shopify.dev/docs/admin-api/rest/reference
+- rest api docs
+- referenced by Parker
+
+https://github.com/Shopify/shopify_python_api
+- python shopify github repo
+- referenced by Parker
 
 """
 
@@ -70,7 +81,7 @@ def getShopCredsByCompanyId(_company_id):
 
 
 
-def getShop(_creds):
+def openShop(_creds):
     """
     input:  _creds = Dict of credentials for accessing Shopify shop with keys of:  'api_key',
             'password', 'shop_name', and 'api_version'.
@@ -87,12 +98,32 @@ def getShop(_creds):
 
 
 
+def getProducts():
+
+    # print(shopify.Product.count())
+
+    previous_id, max_get_qty, all_products = 0, 10, []
+    while True:
+        print("pass", previous_id)
+        products = shopify.Product.find(since_id=previous_id, limit=max_get_qty)
+        print(len(products))
+        all_products += products
+        if len(products) < max_get_qty:  break
+        previous_id = products[-1].id
+
+    print(len(all_products))
+
+
+
+
 ####################################################################################################
                                                                                  ###   TESTING   ###
                                                                                  ###################
 
-# shop_creds = getShopCredsByCompanyName('apeiron_zoh')
+shop_creds = getShopCredsByCompanyName('michael_hyatt_and_company')
 # shop_creds = getShopCredsByCompanyId('1799')
 
-shop = getShop(shop_creds)
-print(shop)
+openShop(shop_creds)
+getProducts()
+
+# print(shop)
