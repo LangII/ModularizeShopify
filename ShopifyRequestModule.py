@@ -37,43 +37,33 @@ import shopify
                                                                                  ###   METHODS   ###
                                                                                  ###################
 
-def getShopCredsByCompanyName(_company_name):
+def getShopCreds(_by):
     """
-    input:  _company_name = String of client's company name.
+    input:  _by =   String of customer's company name or company id (will also accept int of company
+                    id).
     output: Return shop_creds_, dict of client's shopify credentials needed for shop access, from
             ShopifyCredentials module.
     """
 
+    if not _by:  exit("getShopCreds() requires string argument of company name or company id")
+
+    # Perform general maintenance of _by and determine by_type.
+    _by = str(_by).strip()
+    by_type = 'id' if all([ char.isdigit() for char in _by ]) else 'name'
+
+    # BLOCK...  Get creds by searching ShopifyCredentials.py credentials attribute.
     found_it = False
     for key, value in ShopifyCredentials.credentials.items():
-        if _company_name == key[:key.index(' ')]:
+        # Use by_type to determine identifier.
+        identifier = key[:key.index(' ')] if by_type == 'name' else key[key.index(' ') + 1:]
+        if _by == identifier:
             creds, found_it = value, True
             break
     if not found_it:
-        exit("argued _company_name ({}) was not found in ShopifyCredentials".format(_company_name))
+        not_found_print = "argued '{}' of type '{}' was not found in call to getShopCreds()"
+        exit(not_found_print.format(_by, by_type))
 
-    creds_dict_keys = ['api_key', 'password', 'shop_name', 'api_version']
-    shop_creds_ = { key: creds[key] for key in creds_dict_keys }
-
-    return shop_creds_
-
-
-
-def getShopCredsByCompanyId(_company_id):
-    """
-    input:  _company_id = String of client's company id.
-    output: Return shop_creds_, dict of client's shopify credentials needed for shop access, from
-            ShopifyCredentials module.
-    """
-
-    found_it = False
-    for key, value in ShopifyCredentials.credentials.items():
-        if str(_company_id) == key[key.index(' ') + 1:]:
-            creds, found_it = value, True
-            break
-    if not found_it:
-        exit("argued _company_id ({}) was not found in ShopifyCredentials".format(_company_id))
-
+    # Get specific values from creds.
     creds_dict_keys = ['api_key', 'password', 'shop_name', 'api_version']
     shop_creds_ = { key: creds[key] for key in creds_dict_keys }
 
@@ -120,10 +110,12 @@ def getProducts():
                                                                                  ###   TESTING   ###
                                                                                  ###################
 
-shop_creds = getShopCredsByCompanyName('michael_hyatt_and_company')
+# shop_creds = getShopCredsByCompanyName('michael_hyatt_and_company ')
 # shop_creds = getShopCredsByCompanyId('1799')
 
-openShop(shop_creds)
-getProducts()
+# print(shop_creds)
+
+# openShop(shop_creds)
+# getProducts()
 
 # print(shop)
