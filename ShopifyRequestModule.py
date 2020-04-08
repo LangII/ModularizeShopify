@@ -30,6 +30,7 @@ else:  ssl._create_default_https_context = _create_unverified_https_context
 
 import ShopifyCredentials
 import shopify
+import json
 
 
 
@@ -75,33 +76,81 @@ def openShop(_creds):
     """
     input:  _creds = Dict of credentials for accessing Shopify shop with keys of:  'api_key',
             'password', 'shop_name', and 'api_version'.
-    output: Return 'shop_', Shopify access object.
+    output: Return 'shop_', Shopify object identifier.
     """
 
     url_template = 'https://{}:{}@{}.myshopify.com/admin/api/{}'
     creds_list = [ _creds[k] for k in ['api_key', 'password', 'shop_name', 'api_version'] ]
-    shop_url = url_template.format(*creds_list)
-    shopify.ShopifyResource.set_site(shop_url)
+    shopify.ShopifyResource.set_site(url_template.format(*creds_list))
     shop_ = shopify.Shop.current()
 
     return shop_
 
 
 
-def getProducts():
+def getAllShopProducts(_batch_size=20):
+    """
+    input:  _batch_size =   Int of size of each batch of products pulled.  This is needed for
+                            pagination because Shopify's API throttling.
+    output: Return all_products_, a list of all product objects returned from open Shopify shop.
+    """
 
-    # print(shopify.Product.count())
-
-    previous_id, max_get_qty, all_products = 0, 10, []
+    previous_end_id, all_products_ = 0, []
     while True:
-        print("pass", previous_id)
-        products = shopify.Product.find(since_id=previous_id, limit=max_get_qty)
-        print(len(products))
-        all_products += products
-        if len(products) < max_get_qty:  break
-        previous_id = products[-1].id
+        # Get current batch of products based on previous_end_id and _batch_size.
+        products = shopify.Product.find(since_id=previous_end_id, limit=_batch_size)
+        all_products_ += products
+        # If size of current batch is less than _batch_size, stop pulling products.
+        if len(products) < _batch_size:  break
+        previous_end_id = products[-1].id
 
-    print(len(all_products))
+    return all_products_
+
+
+
+def getShopProductDetails(_product):
+    """
+    input:  _product = A shopify product object.
+    output: Return details_, a list of product details of each variant of product.  Many products
+            have only a single variant, so return a list of a single product's details.
+    Shopify Product Reference = https://shopify.dev/docs/admin-api/rest/reference/products/product
+    """
+
+    details_ = []
+    product_details = {
+        'vendor':       _product.vendor,
+        'id':           _product.id,
+        'title':        _product.title,
+        'handle':       _product.handle,
+        'updated_at':   _product.updated_at,
+    }
+    for variant in _product.variants:
+        variant_details = {
+            'variant_id':           variant.id,
+            'variant_title':        variant.title,
+            'variant_barcode':      variant.barcode,
+            'variant_sku':          variant.sku,
+            'variant_inv_qty':      variant.inventory_quantity,
+            'variant_updated_at':   variant.updated_at,
+        }
+        details_ += [{ **product_details, **variant_details }]
+
+    return details_
+
+
+
+def prettyPrintShopProducts(_products):
+    """
+    input:  _products = A list of Shopify product objects.
+    output: Pretty print to console product details from getShopProductDetails().
+    """
+
+    product_count = 0
+    for product in _products:
+        for details in getShopProductDetails(product):
+            product_count += 1
+            print("\nproduct count:", product_count)
+            print(json.dumps(details, indent=4, sort_keys=True))
 
 
 
@@ -110,8 +159,17 @@ def getProducts():
                                                                                  ###   TESTING   ###
                                                                                  ###################
 
-# shop_creds = getShopCredsByCompanyName('michael_hyatt_and_company ')
-# shop_creds = getShopCredsByCompanyId('1799')
+shop_creds = getShopCreds(1899)
+
+openShop(shop_creds)
+
+all_products = getAllShopProducts()
+
+prettyPrintShopProducts(all_products)
+
+# details = getProductDetails(all_products[12])
+# print(details)
+
 
 # print(shop_creds)
 
