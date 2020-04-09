@@ -9,10 +9,14 @@ else:  ssl._create_default_https_context = _create_unverified_https_context
 
 import shopify
 import ShopifyRequestModule as shop_mod
+from datetime import datetime, timedelta
 
 def main():
 
-    shop_creds = shop_mod.getShopCreds(1799)
+    days_ago = 30
+    selected_date = datetime.now() - timedelta(days=days_ago)
+
+    shop_creds = shop_mod.getShopCreds(1899)
 
     shop_mod.openShop(shop_creds)
 
@@ -35,9 +39,34 @@ def getOrders():
     while True:
         print("previous end id =", previous_end_id)
         # Get current batch of orders based on previous_end_id and batch_size.
+
+        """
+        Reference:
+            https://shopify.dev/docs/admin-api/rest/reference/orders/order?api[version]=2020-04
+
+        fulfillment_status accepted arguments:
+            shipped, partial, unshipped, any, unfulfilled
+
+        financial_status accepted arguments:
+            authorized, pending, paid, partially_paid, refunded, voided, partially_refunded, any,
+            unpaid
+
+        status accepted arguments:
+            open, closed, cancelled, any
+        """
         orders = shopify.Order.find(
-            fulfillment_status='unshipped, partial', financial_status='paid, partially_refunded',
-            since_id=previous_end_id, limit=batch_size
+            fulfillment_status='unfulfilled,unshipped,partial',
+            financial_status='paid,partially_refunded',
+            created_at_min=begin_selected_date,
+            created_at_max=end_selected_date,
+            since_id=previous_end_id,
+            limit=batch_size,
+
+            status='',
+            ids=str_of_ids,
+            name='',
+
+            page=0,
         )
         print(orders)
         all_orders += orders
