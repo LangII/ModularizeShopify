@@ -2,82 +2,44 @@
 import sys
 sys.path.insert(0, '/tomcat/python')
 
-import ssl
-try:  _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:  pass
-else:  ssl._create_default_https_context = _create_unverified_https_context
+# import ssl
+# try:  _create_unverified_https_context = ssl._create_unverified_context
+# except AttributeError:  pass
+# else:  ssl._create_default_https_context = _create_unverified_https_context
 
-import shopify
-import ShopifyRequestModule as shop_mod
-from datetime import datetime, timedelta
+import ShopOtherMod as shopother
+import ShopGetOrdersMod as shopgetorders
+
+# from references.part_pointers.apeironzoh_1799_pts import product_id_pointers
+
+
 
 def main():
 
-    days_ago = 30
-    selected_date = datetime.now() - timedelta(days=days_ago)
+    print("\n>>> getting shop settings")
+    shop_settings = shopother.getShopSettings('apeironzoh')
 
-    shop_creds = shop_mod.getShopCreds(1899)
+    print("\n>>> opening shop")
+    shop_creds = shopother.getShopCreds(shop_settings)
+    shopother.openShop(shop_creds, _print=True)
 
-    shop_mod.openShop(shop_creds)
+    print("\n>>> getting all productid parts")
+    all_product_ids = []
+    for pointer in shop_settings.product_id_pointers:  all_product_ids += pointer['shopify_parts']
 
-    orders = getOrders()
+    print("\n>>> getting recent shop orders")
+    keyargs = {'fulfillment_status': 'unfulfilled,partial', 'financial_status': 'paid'}
+    orders = shopgetorders.getRecentShopOrders(_keyargs=keyargs, _print=True)
 
-def getOrders():
+    for order in orders:
+        for item in order.line_items:
+            if item.product_id in all_product_ids:
+                print("item product_id =", item.product_id, "fulfilling")
+            else:
+                print("item product_id =", item.product_id)
 
-    # previous_end_id, batch_size = 0, 10
-    #
-    # orders = shopify.Order.find(
-    #     fulfillment_status='unshipped, partial', financial_status='paid, partially_refunded',
-    #     since_id=previous_end_id, limit=batch_size
-    # )
+    print(all_product_ids)
 
-    batch_size = 10
 
-    COUNTING = 0
-
-    previous_end_id, all_orders = 0, []
-    while True:
-        print("previous end id =", previous_end_id)
-        # Get current batch of orders based on previous_end_id and batch_size.
-
-        """
-        Reference:
-            https://shopify.dev/docs/admin-api/rest/reference/orders/order?api[version]=2020-04
-
-        fulfillment_status accepted arguments:
-            shipped, partial, unshipped, any, unfulfilled
-
-        financial_status accepted arguments:
-            authorized, pending, paid, partially_paid, refunded, voided, partially_refunded, any,
-            unpaid
-
-        status accepted arguments:
-            open, closed, cancelled, any
-        """
-        orders = shopify.Order.find(
-            fulfillment_status='unfulfilled,unshipped,partial',
-            financial_status='paid,partially_refunded',
-            created_at_min=begin_selected_date,
-            created_at_max=end_selected_date,
-            since_id=previous_end_id,
-            limit=batch_size,
-
-            status='',
-            ids=str_of_ids,
-            name='',
-
-            page=0,
-        )
-        print(orders)
-        all_orders += orders
-        # If size of current batch is less than batch_size, stop pulling orders.
-        if len(orders) < batch_size:  break
-        previous_end_id = orders[-1].id
-
-        COUNTING += 1
-        if COUNTING >= 3:  break
-
-    print("")
-    print(all_orders)
 
 main()

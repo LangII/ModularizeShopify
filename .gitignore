@@ -1,4 +1,3 @@
 __pycache__/
 Required/
-part_pointer_ref/
-ShopifyCredentials.py
+shops_settings/
