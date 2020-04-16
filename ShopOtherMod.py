@@ -46,13 +46,17 @@ import shopify
 
 def getShopSettings(_company_name):
     """
-    input:
-    output:
+    input:  _company_name = String of company name in naming format (excluding '_shop_settings.py')
+                            from the company's corresponding file name in the Shopify module
+                            shops_settings directory.
+    output: Return shop_settings_, a module containing designated data for processing company's
+            Shopify orders.
     """
 
+    # Build needed directory and file strings, then use importlib.util to programmatically access
+    # directory and import module based on string designation of file name.
     file_path = '{}/shops_settings/{}_shop_settings.py'.format(os.getcwd(), _company_name)
     file_name = '{}_shop_settings'.format(_company_name)
-
     spec = importlib.util.spec_from_file_location(file_name, file_path)
     shop_settings_ = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(shop_settings_)
@@ -61,32 +65,21 @@ def getShopSettings(_company_name):
 
 
 
-def getShopCreds(_settings):
+def openShop(_settings, _print=False):
     """
-    input:
-    output:
-    """
-
-    # shop_settings = getShopSettings(_company_name)
-
-    # Get specific values from credentials.
-    creds_dict_keys = ['api_key', 'password', 'shop_name', 'api_version']
-    shop_creds_ = { key: _settings.credentials[key] for key in creds_dict_keys }
-
-    return shop_creds_
-
-
-
-def openShop(_creds, _print=False):
-    """
-    input:  _creds = Dict of credentials for accessing Shopify shop with keys of:  'api_key',
-            'password', 'shop_name', and 'api_version'.
-            _print = Bool determining whether actions are printed to console (for debug).
+    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials for the Shopify API call.
+            _print =    Bool determining whether actions are printed to console (for debug).
     output: Return 'shop_', Shopify object identifier.
     """
 
+    # Get shop_creds from _settings.
+    creds_dict_keys = ['api_key', 'password', 'shop_name', 'api_version']
+    shop_creds = { key: _settings.credentials[key] for key in creds_dict_keys }
+
+    # Call to Shopify to get access to 'shop_name' with shop_creds.
     url_template = 'https://{}:{}@{}.myshopify.com/admin/api/{}'
-    creds_list = [ _creds[k] for k in ['api_key', 'password', 'shop_name', 'api_version'] ]
+    creds_list = [ shop_creds[k] for k in ['api_key', 'password', 'shop_name', 'api_version'] ]
     shopify.ShopifyResource.set_site(url_template.format(*creds_list))
     shop_ = shopify.Shop.current()
     if _print:  print("\n>>> you now have API access to the *{}* Shopify shop".format(shop_.name))
@@ -120,7 +113,7 @@ def getShopProductDetails(_product):
     input:  _product = A shopify product object.
     output: Return details_, a list of product details of each variant of product.  Many products
             have only a single variant, so return a list of a single product's details.
-    Shopify Product Reference = https://shopify.dev/docs/admin-api/rest/reference/products/product
+    Shopify Product reference:  https://shopify.dev/docs/admin-api/rest/reference/products/product
     """
 
     details_ = []
@@ -165,17 +158,35 @@ def prettyPrintShopProducts(_products):
                                                                                  ###   TESTING   ###
                                                                                  ###################
 
-# shop_creds = getShopCreds('apeironzoh')
-# print(shop_creds)
+# shop_settings = getShopSettings('apeironzoh')
+# shop_creds = getShopCreds(shop_settings)
 # openShop(shop_creds)
 #
 # products = getAllShopProducts()
+# prettyPrintShopProducts(products)
 
 
 
 ####################################################################################################
                                                                                 ###   OBSOLETE   ###
                                                                                 ####################
+
+###   OBSOLETE (2020-04-16)   ###
+# def getShopCreds(_settings):
+#     """
+#     input:
+#     output:
+#     """
+#
+#     # shop_settings = getShopSettings(_company_name)
+#
+#     # Get specific values from credentials.
+#     creds_dict_keys = ['api_key', 'password', 'shop_name', 'api_version']
+#     shop_creds_ = { key: _settings.credentials[key] for key in creds_dict_keys }
+#
+#     return shop_creds_
+
+
 
 ###   OBSOLETE (2020-04-13)   ###
 # def getShopCreds(_by):
