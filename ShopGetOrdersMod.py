@@ -108,7 +108,7 @@ def weFulfill(_settings, _order, _id_type):
     else:  pointers, pointer_tag = _settings.product_id_pointers, 'shop_product_id'
     for pointer in pointers:  ids_we_fulfill += pointer[pointer_tag]
 
-    # Block...  Return True if found item_id in ids_we_fulfill, else Return False.
+    # Return block...  Return True if found item_id in ids_we_fulfill, else Return False.
     for item in _order.line_items:
         # Get item_id based on _id_type.
         item_id = item.product_id if _id_type == 'product_id' else item.sku
