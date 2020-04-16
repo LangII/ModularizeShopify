@@ -105,7 +105,7 @@ def weFulfill(_settings, _order, _id_type):
     # Get ids_we_fulfill from _settings based on _id_type.
     ids_we_fulfill = []
     if _id_type == 'sku':  pointers, pointer_tag = _settings.sku_pointers, 'shop_sku'
-    else:  pointers, pointer_tag = _settings.product_id_pointers, 'shop_product_id'
+    else:  pointers, pointer_tag = _settings.product_id_pointers, 'shop_product_ids'
     for pointer in pointers:  ids_we_fulfill += pointer[pointer_tag]
 
     # Return block...  Return True if found item_id in ids_we_fulfill, else Return False.
@@ -149,6 +149,43 @@ def getShipInfoFromOrder(_settings, _order):
     ship_info_['userdefval2'] = _order.id
 
     return ship_info_
+
+
+
+def getItemsToFulfillFromOrder(_settings, _order, _id_type):
+    """
+    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to ...
+            _order =    A Shopify Order object containing all order information.
+    output: Return items, ...
+    Shopify order reference:  https://shopify.dev/docs/admin-api/rest/reference/orders/order
+    """
+
+    # Ensure _id_type is correctly argued.
+    if _id_type not in ['product_id', 'sku']:
+        type_check_exit =  "when calling weFulfill(), arg _id_type only accepts 'product_id' or "
+        type_check_exit += "'sku', not '{}', please try again"
+        exit(type_check_exit.format(_id_type))
+
+    if _id_type == 'sku':  pointers, pointer_tag = _settings.sku_pointers, 'shop_sku'
+    else:  pointers, pointer_tag = _settings.product_id_pointers, 'shop_product_ids'
+
+    # BLOCK...  Build items_to_fulfill_, dict with keys as disk_part_numbers and values as
+    # quantities.
+    items_to_fulfill_ = {}
+    for item in _order.line_items:
+        # Designate item_id based on argued _id_type.
+        item_id = item.product_id if _id_type == 'product_id' else item.sku
+        for pointer in pointers:
+            # The final alignment...  If predesignated item_id is in pointer from predesignated
+            # pointers (referenced with predesignated pointer_tag), then populate items_ with keys
+            # and values from 'disk_part_numbers'.
+            if item_id in pointer[pointer_tag]:
+                for key, value in pointer['disk_part_numbers'].items():
+                    # Note...  Important to multiply qty values from both sources.
+                    items_to_fulfill_[key] = value * item.quantity
+
+    return items_to_fulfill_
 
 
 
