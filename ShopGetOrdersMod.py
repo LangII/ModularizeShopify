@@ -29,6 +29,7 @@ except AttributeError:  pass
 else:  ssl._create_default_https_context = _create_unverified_https_context
 
 from datetime import datetime, timedelta
+import json
 
 import shopify
 
@@ -117,6 +118,38 @@ def weFulfill(_settings, _order, _id_type):
 
 
 
+def getShipMethod(_settings, _order):
+    """
+    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to shipping_pointers for ship_method_ assignment.
+            _order =    A Shopify Order object containing all order information.
+    output: Return ship_method_, a string representing the order's designated shipping method
+            assigned by conditions from _settings and values from _order.
+    """
+
+    # Assign ship_method_ value based on default dom/int settings.
+    default_pointers = _settings.shipping_pointers['default']
+    if _order.shipping_address.country == 'United States':  ship_method_ = default_pointers['dom']
+    else:  ship_method_ = default_pointers['int']
+
+    # Block...  Assign ship_method_ based on custom shipping_lines settings.
+    settings_shipping_lines = _settings.shipping_pointers['shipping_lines']
+    if settings_shipping_lines and _order.shipping_lines:
+        # Different settings can use different types; currently accepting 'code' and 'title'.
+        for type in settings_shipping_lines:
+            # Loop through each pointer set in each type.
+            for key, value in settings_shipping_lines[type].items():
+                # Loaded as json because Shopify shipping_line object was difficult to parse.
+                shipping_line = json.loads(_order.shipping_lines[0].to_json().decode('utf-8'))
+                # Final comparison for ship_method_ assignment.
+                if shipping_line['shipping_line'][type] == key:
+                    ship_method_ = value
+                    break
+
+    return ship_method_
+
+
+
 def getShipInfoFromOrder(_settings, _order):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
@@ -144,6 +177,7 @@ def getShipInfoFromOrder(_settings, _order):
     ship_info_['Zip'] =         _order.shipping_address.zip
     ship_info_['Country'] =     _order.shipping_address.country
     ship_info_['Phone'] =       _order.shipping_address.phone
+    ship_info_['ShipMethod'] =  getShipMethod(_settings, _order)
     ship_info_['ShipNumber'] =  _order.order_number
     ship_info_['Email'] =       _order.contact_email
     ship_info_['userdefval2'] = _order.id
@@ -155,9 +189,12 @@ def getShipInfoFromOrder(_settings, _order):
 def getItemsToFulfillFromOrder(_settings, _order, _id_type):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
-                        access to ...
+                        access to sku_pointers an product_id_pointers for shop id to disk id
+                        referencing.
             _order =    A Shopify Order object containing all order information.
-    output: Return items, ...
+    output: Return items_to_fulfill_, dict with keys as disk_part_numbers and values as quantities
+            of said part numbers.  Each disk_part_number is referenced from _order by it's pointer
+            in _settings and each quantity is multiplied through the pointer as well.
     Shopify order reference:  https://shopify.dev/docs/admin-api/rest/reference/orders/order
     """
 
