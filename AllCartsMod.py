@@ -1,6 +1,7 @@
 
 
 
+from copy import deepcopy
 from datetime import datetime, timedelta
 
 from Required import Connections
@@ -12,7 +13,7 @@ cur = conn.cursor()
 
 
 
-def xmlDupeCheckUserdefval2(_ordering, _company_id, _cart, _days_ago=0):
+def dupeCheckXmlShipUserdefval2(_ordering, _company_id, _cart, _days_ago=0):
     """
     input:  _ordering =
             _company_id =
@@ -42,3 +43,56 @@ def xmlDupeCheckUserdefval2(_ordering, _company_id, _cart, _days_ago=0):
         else:  dupes_ += [order]
 
     return ordering_, dupes_
+
+
+
+def performXmlShipInsert(_ordering):
+    """
+    input:  _ordering =
+    output:
+    """
+
+    # Build ship_info_cols and sku_qty_cols.
+    ship_info_cols = [
+        'CompanyID', 'inDate', 'ReqBy', 'Company', 'Attn', 'Addy1', 'Addy2', 'City', 'State', 'Zip',
+        'Country', 'Phone', 'ShipMethod', 'ShipNumber', 'Email', 'userdefval2'
+    ]
+    sku_qty_cols = ['sku', 'qty']
+    for i in range(2, 61):  sku_qty_cols += ['sku{}'.format(i), 'qty{}'.format(i)]
+
+    # BLOCK...  Build inserts.  Start by building empty_items_insert_list as default template for
+    # items_insert_list.
+    empty_items_insert_list = []
+    for i, _ in enumerate(range(len(sku_qty_cols))):
+        if i % 2 == 0:  empty_items_insert_list += ['\'\'']
+        else:  empty_items_insert_list += ['0']
+    # Build inserts_list (easier to build as list, then convert to string).
+    inserts_list = []
+    for order in _ordering:
+        # Build ship_info_insert.
+        ship_info_list = [ '\'{}\''.format(str(order['ship_info'][c])) for c in ship_info_cols ]
+        ship_info_insert = ', '.join(ship_info_list)
+        # Build items_insert.
+        items_insert_list = deepcopy(empty_items_insert_list)
+        counter = 0
+        for sku, qty in order['items'].items():
+            items_insert_list[counter] = '\'{}\''.format(sku)
+            items_insert_list[counter + 1] = str(qty)
+            counter += 2
+        items_insert = ', '.join(items_insert_list)
+        # Combine ship_info_insert and items_insert to build inserts_list.
+        inserts_list += ['({}, {})'.format(ship_info_insert, items_insert)]
+    # Convert inserts_list into inserts string.
+    inserts = ', '.join([ i for i in inserts_list ])
+
+    # With ship_info_cols, sku_qty_cols, and inserts, build and execute sql query.
+    query = """
+        INSERT INTO tblXmlShipData ({}) VALUES {}
+    """
+    query = query.format(', '.join([ i for i in ship_info_cols + sku_qty_cols ]), inserts)
+
+    print(query)
+    exit()
+
+
+# performXmlShipInsert([])
