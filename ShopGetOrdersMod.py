@@ -57,7 +57,7 @@ def getRecentShopOrders(_settings, _print=False):
     # Override default args with values from _settings.get_recent_orders_args.
     for key, value in _settings.get_recent_orders_args.items():  args[key] = value
 
-    # Set time stamp arg to date _within_days ago.
+    # Set time stamp arg to date of _within_days ago.
     within_date = datetime.now() - timedelta(days=args['within_days'])
 
     # BLOCK...  While loop performs pagination of calls on Shopify API, in case total number of
@@ -87,7 +87,7 @@ def getRecentShopOrders(_settings, _print=False):
 
 def weFulfill(_settings, _order, _id_type):
     """
-    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+    input:  _settings = A Shopify settings module in a json like syntax.  This method requires
                         access to sku_pointers and product_id_pointers to verify if items in _order
                         are items we fulfill.
             _order =    A Shopify Order object containing all order information.
@@ -120,7 +120,7 @@ def weFulfill(_settings, _order, _id_type):
 
 def getShipMethod(_settings, _order):
     """
-    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+    input:  _settings = A Shopify settings module in a json like syntax.  This method requires
                         access to shipping_pointers for ship_method_ assignment.
             _order =    A Shopify Order object containing all order information.
     output: Return ship_method_, a string representing the order's designated shipping method
@@ -182,6 +182,10 @@ def getShipInfoFromOrder(_settings, _order):
     ship_info_['Email'] =       _order.contact_email
     ship_info_['userdefval2'] = _order.id
 
+    # Convert None values to empty strings.
+    for k, v in ship_info_.items():
+        if v == None:  ship_info_[k] = ''
+
     return ship_info_
 
 
@@ -223,6 +227,19 @@ def getItemsToFulfillFromOrder(_settings, _order, _id_type):
                     items_to_fulfill_[key] = value * item.quantity
 
     return items_to_fulfill_
+
+
+
+def printOrderingSummary(_ordering):
+    """
+    input:  _ordering =
+    output:
+    """
+
+    summary_print = ">>>         ORDERING...  Attn: {} | Addy1: {} | Items: "
+    ship_info = _ordering['ship_info']
+    summary_print = summary_print.format(ship_info['Attn'], ship_info['Addy1'])
+    print(summary_print + str(_ordering['items']))
 
 
 
