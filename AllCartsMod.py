@@ -13,14 +13,22 @@ cur = conn.cursor()
 
 
 
-def dupeCheckXmlShipUserdefval2(_ordering, _company_id, _cart, _days_ago=0):
+def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print=False):
     """
-    input:  _ordering =
+    input:  _orders =
             _company_id =
             _cart =
             _days_ago =
-    output:
+    output: Return ordering_, a list of orders from _ordering that are not duplicates of previous
+            orders found in tblXmlShipData based on userdefval2.  If dupes are found they are
+            returned as a list in dupes_.
     """
+
+    # Ensure _cart is correctly argued.
+    if _cart not in ['Shopify']:
+        cart_check_exit =  "when calling dupeCheckXmlShipUserdefval2(), arg _cart only accepts"
+        cart_check_exit += "'Shopify', not '{}', please try again"
+        exit(cart_check_exit.format(_cart))
 
     # BLOCK...  Get list of previous userdefval2 values from argued conditions.
     query = """
@@ -34,31 +42,43 @@ def dupeCheckXmlShipUserdefval2(_ordering, _company_id, _cart, _days_ago=0):
         days_ago_stamp = datetime.now() - timedelta(days=_days_ago)
         query = query.format(_company_id, _cart, and_indate_ext.format(days_ago_stamp))
     cur.execute(query)
-    prev_userdefval2 = [ i[0] for i in cur.fetchall() ]
+    prev_userdefval2s = [ i[0] for i in cur.fetchall() ]
 
-    # Get ordering_ and dupes_ based on whether or not an order in ordering is in prev_userdefval2.
-    ordering_, dupes_ = [], []
-    for order in _ordering:
-        if order['ship_info']['userdefval2'] not in prev_userdefval2:  ordering_ += [order]
-        else:  dupes_ += [order]
+    # BLOCK...  Get ordering_ and dupes_ based on whether or not an order in ordering is in
+    # prev_userdefval2.
+    not_dupes_, dupes_ = [], []
+    for order in _orders:
+        # Update userdefval2 based on _cart.
+        if _cart == 'Shopify':
+            if _print:  print(">>>     checking order {}...  ".format(order.id), end='')
+            userdefval2 = order.id
+        # Basic conditionals checking if userdefval2 is in prev_userdefval2s and assigning order
+        # accordingly.
+        if userdefval2 not in prev_userdefval2s:
+            not_dupes_ += [order]
+            if _print:  print("is not a dupe")
+        else:
+            dupes_ += [order]
+            if _print:  print("is a dupe")
 
-    return ordering_, dupes_
+    return not_dupes_, dupes_
 
 
 
-def performXmlShipInsert(_ordering):
+def insertIntoXmlShipData(_ordering):
     """
     input:  _ordering =
     output:
     """
 
-    # Build ship_info_cols and sku_qty_cols.
+    # Build ship_info_cols, sku_qty_cols, then concatenate for all_cols.
     ship_info_cols = [
         'CompanyID', 'inDate', 'ReqBy', 'Company', 'Attn', 'Addy1', 'Addy2', 'City', 'State', 'Zip',
         'Country', 'Phone', 'ShipMethod', 'ShipNumber', 'Email', 'userdefval2'
     ]
     sku_qty_cols = ['sku', 'qty']
     for i in range(2, 61):  sku_qty_cols += ['sku{}'.format(i), 'qty{}'.format(i)]
+    all_cols = ship_info_cols + sku_qty_cols
 
     # BLOCK...  Build inserts.  Start by building empty_items_insert_list as default template for
     # items_insert_list.
@@ -89,7 +109,7 @@ def performXmlShipInsert(_ordering):
     query = """
         INSERT INTO tblXmlShipData ({}) VALUES {}
     """
-    query = query.format(', '.join([ i for i in ship_info_cols + sku_qty_cols ]), inserts)
+    query = query.format(', '.join([ col for col in all_cols ]), inserts)
 
     print(query)
     exit()
