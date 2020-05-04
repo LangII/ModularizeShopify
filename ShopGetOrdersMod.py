@@ -85,12 +85,12 @@ def getRecentShopOrders(_settings, _print=False):
 
 
 
-def weFulfill(_settings, _order, _id_type):
+def weFulfillItemsByIdType(_settings, _orders, _id_type, _print=False):
     """
     input:  _settings = A Shopify settings module in a json like syntax.  This method requires
                         access to sku_pointers and product_id_pointers to verify if items in _order
                         are items we fulfill.
-            _order =    A Shopify Order object containing all order information.
+            _orders =    A list of Shopify Order objects containing all order information.
             _id_type =  Accepts 'product_id' or 'sku' to designate values of pointers and
                         pointer_tag.
     output: Return True if item_id is in ids_we_fulfill, else return False.
@@ -109,12 +109,35 @@ def weFulfill(_settings, _order, _id_type):
     else:  pointers, pointer_tag = _settings.product_id_pointers, 'shop_product_ids'
     for pointer in pointers:  ids_we_fulfill += pointer[pointer_tag]
 
-    # Return block...  Return True if found item_id in ids_we_fulfill, else Return False.
-    for item in _order.line_items:
-        # Get item_id based on _id_type.
-        item_id = item.product_id if _id_type == 'product_id' else item.sku
-        if item_id in ids_we_fulfill:  return True
-    return False
+    # BLOCK...  Filter through _orders to get we_fulfill_ and we_do_not_fulfill_.
+    we_fulfill_, we_do_not_fulfill_ = [], []
+    for order in _orders:
+        if _print:  print(">>>     checking order {}...  ".format(order.id), end='')
+        found_one = False
+        # Check each item in line_items to see if it's in ids_we_fulfill.
+        for item in order.line_items:
+            # Set item_id based on _id_type, then see if item_id is ins ids_we_fulfill.
+            item_id = item.product_id if _id_type == 'product_id' else item.sku
+            if item_id in ids_we_fulfill:
+                # If so, add order to we_fulfill_, trigger found_one, and end inner for loop.
+                we_fulfill_ += [order]
+                found_one = True
+                if _print:  print("has items we fulfill")
+                break
+        # If all items are checked and none are in ids_we_fulfill, add order to we_do_not_fulfill_.
+        if not found_one:
+            we_do_not_fulfill_ += [order]
+            if _print:  print("does not have items we fulfill")
+
+    """   OBSOLETE (2020-05-04)   """
+    # # Return block...  Return True if found item_id in ids_we_fulfill, else Return False.
+    # for item in _order.line_items:
+    #     # Get item_id based on _id_type.
+    #     item_id = item.product_id if _id_type == 'product_id' else item.sku
+    #     if item_id in ids_we_fulfill:  return True
+    # return False
+
+    return we_fulfill_, we_do_not_fulfill_
 
 
 
@@ -232,8 +255,8 @@ def getItemsToFulfillFromOrder(_settings, _order, _id_type):
 
 def printOrderingSummary(_ordering):
     """
-    input:  _ordering =
-    output:
+    input:  _ordering = An order in order submission format.
+    output: For console print purposes only.
     """
 
     summary_print = ">>>         ORDERING...  Attn: {} | Addy1: {} | Items: "
@@ -247,7 +270,7 @@ def printOrderingSummary(_ordering):
                                                                                 ###   OBSOLETE   ###
                                                                                 ####################
 
-###   OBSOLETE (2020-04-15)   ###
+"""   OBSOLETE (2020-04-15)   """
 # def getRecentShopOrders(_within_days=30, _keyargs='default', _batch_size=250, _print=False):
     # """
     # input:  _within_days =  Used to get date stamp of date that is X number days prior to current
