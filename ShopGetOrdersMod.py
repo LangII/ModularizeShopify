@@ -93,14 +93,16 @@ def weFulfillItemsByIdType(_settings, _orders, _id_type, _print=False):
             _orders =    A list of Shopify Order objects containing all order information.
             _id_type =  Accepts 'product_id' or 'sku' to designate values of pointers and
                         pointer_tag.
-    output: Return True if item_id is in ids_we_fulfill, else return False.
+            _print =    Bool determining whether actions are printed to console (for debug).
+    output: Return we_fulfill_ and we_do_not_fulfill_, lists of sorted orders from _orders.  To
+            fulfill or not to fulfill determined based on items in orders by _id_type.
     Shopify order reference:  https://shopify.dev/docs/admin-api/rest/reference/orders/order
     """
 
     # Ensure _id_type is correctly argued.
     if _id_type not in ['product_id', 'sku']:
-        type_check_exit =  "when calling weFulfill(), arg _id_type only accepts 'product_id' or "
-        type_check_exit += "'sku', not '{}', please try again"
+        type_check_exit =  "when calling weFulfillItemsByIdType(), arg _id_type only accepts "
+        type_check_exit += "'product_id' or 'sku', not '{}', please try again"
         exit(type_check_exit.format(_id_type))
 
     # Get ids_we_fulfill from _settings based on _id_type.
@@ -109,14 +111,14 @@ def weFulfillItemsByIdType(_settings, _orders, _id_type, _print=False):
     else:  pointers, pointer_tag = _settings.product_id_pointers, 'shop_product_ids'
     for pointer in pointers:  ids_we_fulfill += pointer[pointer_tag]
 
-    # BLOCK...  Filter through _orders to get we_fulfill_ and we_do_not_fulfill_.
+    # BLOCK...  Sort each order in _orders into we_fulfill_ or we_do_not_fulfill_.
     we_fulfill_, we_do_not_fulfill_ = [], []
     for order in _orders:
         if _print:  print(">>>     checking order {}...  ".format(order.id), end='')
         found_one = False
         # Check each item in line_items to see if it's in ids_we_fulfill.
         for item in order.line_items:
-            # Set item_id based on _id_type, then see if item_id is ins ids_we_fulfill.
+            # Set item_id based on _id_type, then see if item_id is in ids_we_fulfill.
             item_id = item.product_id if _id_type == 'product_id' else item.sku
             if item_id in ids_we_fulfill:
                 # If so, add order to we_fulfill_, trigger found_one, and end inner for loop.
@@ -129,6 +131,8 @@ def weFulfillItemsByIdType(_settings, _orders, _id_type, _print=False):
             we_do_not_fulfill_ += [order]
             if _print:  print("does not have items we fulfill")
 
+    return we_fulfill_, we_do_not_fulfill_
+
     """   OBSOLETE (2020-05-04)   """
     # # Return block...  Return True if found item_id in ids_we_fulfill, else Return False.
     # for item in _order.line_items:
@@ -137,7 +141,6 @@ def weFulfillItemsByIdType(_settings, _orders, _id_type, _print=False):
     #     if item_id in ids_we_fulfill:  return True
     # return False
 
-    return we_fulfill_, we_do_not_fulfill_
 
 
 
@@ -213,7 +216,7 @@ def getShipInfoFromOrder(_settings, _order):
 
 
 
-def getItemsToFulfillFromOrder(_settings, _order, _id_type):
+def getItemsWeFulfillFromOrder(_settings, _order, _id_type):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to sku_pointers an product_id_pointers for shop id to disk id
@@ -253,16 +256,41 @@ def getItemsToFulfillFromOrder(_settings, _order, _id_type):
 
 
 
+def getOrderingFromOrders(_settings, _orders, _items_id_type):
+    """
+    input:
+    output:
+    """
+
+    ordering_ = []
+    for order in _orders:
+        ordering_single = {}
+        ordering_single['ship_info'] = getShipInfoFromOrder(_settings, order)
+        ordering_single['items'] = getItemsWeFulfillFromOrder(_settings, order, _items_id_type)
+        ordering_ += [ordering_single]
+
+    return ordering_
+
+
+
 def printOrderingSummary(_ordering):
     """
     input:  _ordering = An order in order submission format.
     output: For console print purposes only.
     """
 
-    summary_print = ">>>         ORDERING...  Attn: {} | Addy1: {} | Items: "
+    # summary_print = ">>>     ORDERING...  Attn: {} | Addy1: {} | Items: "
+    summary_print = ">>>     ORDERING...  Attn: {} | Items: "
     ship_info = _ordering['ship_info']
-    summary_print = summary_print.format(ship_info['Attn'], ship_info['Addy1'])
+    # summary_print = summary_print.format(ship_info['Attn'], ship_info['Addy1'])
+    summary_print = summary_print.format(ship_info['Attn'])
     print(summary_print + str(_ordering['items']))
+
+
+
+def printAllOrderingSummary(_ordering):
+
+    for ordering in _ordering:  printOrderingSummary(ordering)
 
 
 

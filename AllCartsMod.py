@@ -65,7 +65,7 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
 
 
 
-def insertIntoXmlShipData(_ordering):
+def insertIntoXmlShipData(_ordering, _print=False):
     """
     input:  _ordering =
     output:
@@ -103,16 +103,14 @@ def insertIntoXmlShipData(_ordering):
         # Combine ship_info_insert and items_insert to build inserts_list.
         inserts_list += ['({}, {})'.format(ship_info_insert, items_insert)]
     # Convert inserts_list into inserts string.
-    inserts = ', '.join([ i for i in inserts_list ])
+    inserts = ',\n'.join([ i for i in inserts_list ])
 
     # With ship_info_cols, sku_qty_cols, and inserts, build and execute sql query.
-    query = """
-        INSERT INTO tblXmlShipData ({}) VALUES {}
-    """
+    query = """INSERT INTO tblXmlShipData (\n{}\n)\nVALUES\n{}"""
     query = query.format(', '.join([ col for col in all_cols ]), inserts)
+    if _print:  print(query)
 
-    print(query)
     exit()
 
-
-# performXmlShipInsert([])
+    # cur.execute(query)
+    # conn.commit()
