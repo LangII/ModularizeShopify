@@ -1,8 +1,8 @@
 
 
 
-from copy import deepcopy
 from datetime import datetime, timedelta
+from copy import deepcopy
 
 from Required import Connections
 
@@ -15,8 +15,8 @@ cur = conn.cursor()
 
 def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print=False):
     """
-    input:  _orders =
-            _company_id =
+    input:  _company_id =
+            _orders =
             _cart =
             _days_ago =
     output: Return ordering_, a list of orders from _ordering that are not duplicates of previous
@@ -65,9 +65,31 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
 
 
 
+def makeAllTest(_ordering, _trim_to=0):
+    """
+    input:  _ordering =
+            _trim_to =
+    output: Return _ordering, a modified version of argued _ordering with 'TEST' in 'Attn' and
+            'Addy1'.
+    """
+
+    updating_keys = ['Attn', 'Addy1']
+    test_insert = 'TEST {} TEST'
+
+    if _trim_to:  _ordering = _ordering[:_trim_to]
+
+    for each in range(len(_ordering)):
+        for k in updating_keys:
+            _ordering[each]['ship_info'][k] = test_insert.format(_ordering[each]['ship_info'][k])
+
+    return _ordering
+
+
+
 def insertIntoXmlShipData(_ordering, _print=False):
     """
     input:  _ordering =
+            _print =
     output:
     """
 
@@ -83,7 +105,7 @@ def insertIntoXmlShipData(_ordering, _print=False):
     # BLOCK...  Build inserts.  Start by building empty_items_insert_list as default template for
     # items_insert_list.
     empty_items_insert_list = []
-    for i, _ in enumerate(range(len(sku_qty_cols))):
+    for i in range(len(sku_qty_cols)):
         if i % 2 == 0:  empty_items_insert_list += ['\'\'']
         else:  empty_items_insert_list += ['0']
     # Build inserts_list (easier to build as list, then convert to string).
@@ -108,9 +130,10 @@ def insertIntoXmlShipData(_ordering, _print=False):
     # With ship_info_cols, sku_qty_cols, and inserts, build and execute sql query.
     query = """INSERT INTO tblXmlShipData (\n{}\n)\nVALUES\n{}"""
     query = query.format(', '.join([ col for col in all_cols ]), inserts)
-    if _print:  print(query)
+    if _print:  print(">>> sql insert query:\n{}".format(query))
 
-    exit()
+    # exit()
 
-    # cur.execute(query)
-    # conn.commit()
+    cur.execute(query)
+    conn.commit()
+    print(">>> !!!   INSERT QUERY EXECUTED   !!!")

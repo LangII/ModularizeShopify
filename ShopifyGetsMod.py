@@ -72,7 +72,7 @@ def getRecentShopOrders(_settings, _print=False):
         )
         # Arguable print for debugging.
         if _print:
-            batch_print = "\n>>> in batch {}...  retrieved {} orders...\n>>> order ids:  {}"
+            batch_print = "\n>>> in batch {}...  retrieved {} orders...\n>>> order ids:\n{}"
             print_format = [batch_count, len(orders), ', '.join([ str(o.id) for o in orders ])]
             print(batch_print.format(*print_format))
         # Build all_orders_, check for while loop break condition, then if loop continues set next
