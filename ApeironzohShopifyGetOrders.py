@@ -10,32 +10,40 @@ else:  ssl._create_default_https_context = _create_unverified_https_context
 from datetime import datetime
 from copy import deepcopy
 
-from ShopifyOtherMod import *
-from ShopifyGetsMod import *
-from AllCartsMod import *
+import ShopifyOtherMod as shop_other
+import ShopifyGetsMod as shop_gets
+import AllCartsMod as all_carts
 
 
 
 def main():
 
+    ###########################
+
+    start_time = datetime.now()
+
     print("\n>>> getting shop settings")
-    shop_settings = getShopSettings('apeironzoh')
+    shop_settings = shop_other.getShopSettings('apeironzoh')
 
     print("\n>>> opening shop")
-    openShop(shop_settings, _print=True)
+    shop_other.openShop(shop_settings, _print=True)
+
+    ###########################
 
     print("\n>>> getting recent shop orders")
-    shop_orders = getRecentShopOrders(shop_settings, _print=True)
+    shop_orders = shop_gets.getRecentShopOrders(shop_settings, _print=True)
     print(">>> retrieved {} shop orders".format(len(shop_orders)))
 
-
+    if not shop_orders:  exit("\n>>> no orders to fulfill, goodbye")
 
     ###########################
     """   FILTERING   >>>   """
     ###########################
 
+    filtered_out = {}
+
     # print("\n>>> filtering orders by userdefval2 dupecheck")
-    # not_dupes, dupes = dupeCheckXmlShipUserdefval2(
+    # not_dupes, dupes = all_carts.dupeCheckXmlShipUserdefval2(
     #     _company_id=shop_settings.credentials['company_id'],
     #     _orders=shop_orders,
     #     _cart='Shopify',
@@ -47,11 +55,12 @@ def main():
     # print(">>> dupes =           {}".format(len(dupes)))
     # print(">>> not dupes =       {}".format(len(not_dupes)))
     # shop_orders = deepcopy(not_dupes)
+    # filtered_out['dupes'] = dupes
 
     ###########################
 
     print("\n>>> filtering orders by items we fulfill")
-    we_fulfill, we_do_not_fulfill = weFulfillItemsByIdType(
+    we_fulfill, we_do_not_fulfill = shop_gets.weFulfillItemsByIdType(
         _settings=shop_settings,
         _orders=shop_orders,
         _id_type='product_id',
@@ -62,25 +71,27 @@ def main():
     print(">>> we do not fulfill = {}".format(len(we_do_not_fulfill)))
     print(">>> we fulfill =        {}".format(len(we_fulfill)))
     shop_orders = deepcopy(we_fulfill)
+    filtered_out['we_do_not_fulfill'] = we_do_not_fulfill
 
     ###########################
     """   <<<   FILTERING   """
     ###########################
 
+    if not shop_orders:  exit("\n>>> after filtering, no orders to fulfill, goodbye")
 
+    print("\n>>> converting orders into disk format")
+    disk_orders = shop_gets.convertOrdersToDiskFormat(shop_settings, shop_orders, 'product_id')
 
-    print("\n>>> converting orders into disk ordering format")
-    ordering = getOrderingFromOrders(shop_settings, shop_orders, 'product_id')
-    printAllOrderingSummary(ordering)
+    disk_orders = all_carts.makeAllTest(disk_orders, 3) # TESTING
+    all_carts.printDiskOrdersSummary(disk_orders)
 
-    # MODIFY FOR TESTING
-    ordering = makeAllTest(ordering, 3)
+    print("\n>>> inserting disk orders into tblXmlShipData")
+    all_carts.insertIntoXmlShipData(disk_orders, _print=True)
 
-    print("\n>>> inserting 'ordering' into tblXmlShipData")
-    insertIntoXmlShipData(ordering, _print=True)
+    # printGetOrdersSummary(disk_orders, filtered_out)
 
-    print("MADE IT")
-    exit()
+    print("\n>>> now exiting {}, goodbye".format(sys.argv[0][sys.argv[0].rfind('\\') + 1:]))
+    print(">>> runtime = {}".format(str(datetime.now() - start_time)))
 
 
 

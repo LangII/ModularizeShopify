@@ -256,41 +256,25 @@ def getItemsWeFulfillFromOrder(_settings, _order, _id_type):
 
 
 
-def getOrderingFromOrders(_settings, _orders, _items_id_type):
+def convertOrdersToDiskFormat(_settings, _orders, _items_id_type):
     """
     input:
     output:
     """
 
-    ordering_ = []
+    """
+    TURNOVER NOTES:
+        - Don't need arg _items_id_type.  That should be extracted from _settings.
+    """
+
+    disk_orders_ = []
     for order in _orders:
-        ordering_single = {}
-        ordering_single['ship_info'] = getShipInfoFromOrder(_settings, order)
-        ordering_single['items'] = getItemsWeFulfillFromOrder(_settings, order, _items_id_type)
-        ordering_ += [ordering_single]
+        disk_order = {}
+        disk_order['ship_info'] = getShipInfoFromOrder(_settings, order)
+        disk_order['items'] = getItemsWeFulfillFromOrder(_settings, order, _items_id_type)
+        disk_orders_ += [disk_order]
 
-    return ordering_
-
-
-
-def printOrderingSummary(_ordering):
-    """
-    input:  _ordering = An order in order submission format.
-    output: For console print purposes only.
-    """
-
-    # summary_print = ">>>     ORDERING...  Attn: {} | Addy1: {} | Items: "
-    summary_print = ">>>     ORDERING...  Attn: {} | Items: "
-    ship_info = _ordering['ship_info']
-    # summary_print = summary_print.format(ship_info['Attn'], ship_info['Addy1'])
-    summary_print = summary_print.format(ship_info['Attn'])
-    print(summary_print + str(_ordering['items']))
-
-
-
-def printAllOrderingSummary(_ordering):
-
-    for ordering in _ordering:  printOrderingSummary(ordering)
+    return disk_orders_
 
 
 

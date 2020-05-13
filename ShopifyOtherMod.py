@@ -55,8 +55,8 @@ def getShopSettings(_company_name):
 
     # Build needed directory and file strings, then use importlib.util to programmatically access
     # directory and import module based on string designation of file name.
-    file_path = '{}/shops_settings/{}_shop_settings.py'.format(os.getcwd(), _company_name)
-    file_name = '{}_shop_settings'.format(_company_name)
+    file_path = '{}/shops_settings/{}_shopify_settings.py'.format(os.getcwd(), _company_name)
+    file_name = '{}_shopify_settings'.format(_company_name)
     spec = importlib.util.spec_from_file_location(file_name, file_path)
     shop_settings_ = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(shop_settings_)

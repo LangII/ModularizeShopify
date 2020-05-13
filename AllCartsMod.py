@@ -19,7 +19,7 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
             _orders =
             _cart =
             _days_ago =
-    output: Return ordering_, a list of orders from _ordering that are not duplicates of previous
+    output: Return orders_, a list of orders from _orders that are not duplicates of previous
             orders found in tblXmlShipData based on userdefval2.  If dupes are found they are
             returned as a list in dupes_.
     """
@@ -44,7 +44,7 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
     cur.execute(query)
     prev_userdefval2s = [ i[0] for i in cur.fetchall() ]
 
-    # BLOCK...  Get ordering_ and dupes_ based on whether or not an order in ordering is in
+    # BLOCK...  Get orders_ and dupes_ based on whether or not an order in orders is in
     # prev_userdefval2.
     not_dupes_, dupes_ = [], []
     for order in _orders:
@@ -65,30 +65,30 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
 
 
 
-def makeAllTest(_ordering, _trim_to=0):
+def makeAllTest(_orders, _trim_to=0):
     """
-    input:  _ordering =
+    input:  _orders =
             _trim_to =
-    output: Return _ordering, a modified version of argued _ordering with 'TEST' in 'Attn' and
+    output: Return _orders, a modified version of argued _orders with 'TEST' in 'Attn' and
             'Addy1'.
     """
 
     updating_keys = ['Attn', 'Addy1']
     test_insert = 'TEST {} TEST'
 
-    if _trim_to:  _ordering = _ordering[:_trim_to]
+    if _trim_to:  _orders = _orders[:_trim_to]
 
-    for each in range(len(_ordering)):
+    for each in range(len(_orders)):
         for k in updating_keys:
-            _ordering[each]['ship_info'][k] = test_insert.format(_ordering[each]['ship_info'][k])
+            _orders[each]['ship_info'][k] = test_insert.format(_orders[each]['ship_info'][k])
 
-    return _ordering
+    return _orders
 
 
 
-def insertIntoXmlShipData(_ordering, _print=False):
+def insertIntoXmlShipData(_orders, _print=False):
     """
-    input:  _ordering =
+    input:  _orders =
             _print =
     output:
     """
@@ -110,7 +110,7 @@ def insertIntoXmlShipData(_ordering, _print=False):
         else:  empty_items_insert_list += ['0']
     # Build inserts_list (easier to build as list, then convert to string).
     inserts_list = []
-    for order in _ordering:
+    for order in _orders:
         # Build ship_info_insert.
         ship_info_list = [ '\'{}\''.format(str(order['ship_info'][c])) for c in ship_info_cols ]
         ship_info_insert = ', '.join(ship_info_list)
@@ -134,6 +134,26 @@ def insertIntoXmlShipData(_ordering, _print=False):
 
     # exit()
 
-    cur.execute(query)
-    conn.commit()
-    print(">>> !!!   INSERT QUERY EXECUTED   !!!")
+    # cur.execute(query)
+    # conn.commit()
+    # print(">>> !!!   INSERT QUERY EXECUTED   !!!")
+
+
+
+def printDiskOrdersSummary(_orders):
+    """
+    input:  _orders =
+    output:
+    """
+
+    order_print = ">>>     | Attn: {} | Items: {}"
+
+    if not isinstance(_orders, (list, tuple)):
+        attn_w = len(_orders['ship_info']['Attn'])
+        print_largs = [_orders['ship_info']['Attn'].ljust(attn_w), _orders['items']]
+        print(order_print.format(*print_largs))
+    else:
+        attn_w = max([ len(order['ship_info']['Attn']) for order in _orders ])
+        for order in _orders:
+            print_largs = [order['ship_info']['Attn'].ljust(attn_w), order['items']]
+            print(order_print.format(*print_largs))
