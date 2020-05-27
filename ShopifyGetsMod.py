@@ -159,18 +159,19 @@ def getShipMethod(_settings, _order):
     else:  ship_method_ = default_pointers['int']
 
     # Block...  Assign ship_method_ based on custom shipping_lines settings.
-    settings_shipping_lines = _settings.shipping_pointers['shipping_lines']
-    if settings_shipping_lines and _order.shipping_lines:
-        # Different settings can use different types; currently accepting 'code' and 'title'.
-        for type in settings_shipping_lines:
-            # Loop through each pointer set in each type.
-            for key, value in settings_shipping_lines[type].items():
-                # Loaded as json because Shopify shipping_line object was difficult to parse.
-                shipping_line = json.loads(_order.shipping_lines[0].to_json().decode('utf-8'))
-                # Final comparison for ship_method_ assignment.
-                if shipping_line['shipping_line'][type] == key:
-                    ship_method_ = value
-                    break
+    if 'shipping_lines' in _settings.shipping_pointers.keys():
+        settings_shipping_lines = _settings.shipping_pointers['shipping_lines']
+        if settings_shipping_lines and _order.shipping_lines:
+            # Different settings can use different types; currently accepting 'code' and 'title'.
+            for type in settings_shipping_lines:
+                # Loop through each pointer set in each type.
+                for key, value in settings_shipping_lines[type].items():
+                    # Loaded as json because Shopify shipping_line object was difficult to parse.
+                    shipping_line = json.loads(_order.shipping_lines[0].to_json().decode('utf-8'))
+                    # Final comparison for ship_method_ assignment.
+                    if shipping_line['shipping_line'][type] == key:
+                        ship_method_ = value
+                        break
 
     return ship_method_
 
