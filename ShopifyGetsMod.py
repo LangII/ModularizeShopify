@@ -131,11 +131,30 @@ def weFulfillItemsByIdType(_settings, _orders, _print=False):
 
 
 
+def getShipMethodByDefault(_settings, _order):
+    """
+    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+            _order =    A Shopify Order object containing all order information.
+    output: Return ship_method_, shipping method of the _order as designated by _settings.
+    """
+
+    # Assign ship_method_ value based on default dom/int settings.
+    default_pointers = _settings.ship_method_pointers['by_default']
+    if _order['shipping_address']['country'] == 'United States':
+        ship_method_ = default_pointers['dom']
+    else:
+        ship_method_ = default_pointers['int']
+
+    return ship_method_
+
+
+
 def customCheckSubtotalPrice(_key, _order):
     """
-    input:  _key = Key from shop_settings.shipping_pointers['by_shipping_lines'][''] dict.
+    input:  _key = Key from shop_settings.ship_method_pointers['by_shipping_lines'][''] dict.
             _order = A Shopify Order object containing all order information.
-    output:  Return (key_, use_default_).  key_ is a modified _key with && flag removed.
+    output: Return (key_, use_default_).  key_ is a modified _key with && flag removed.
             use_default_ is a bool telling getShipMethod() whether or not to use the default ship
             method based on value of _order['subtotal_price'].
     """
@@ -148,44 +167,156 @@ def customCheckSubtotalPrice(_key, _order):
 
 
 
+def getShipMethodByShippingLines(_ship_method, _settings, _order):
+    """
+    input:  _ship_method =  Previously designated ship_method to be maintained if get by condition
+                            is not met.
+            _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+            _order =    A Shopify Order object containing all order information.
+    output: Return _ship_method, shipping method of the _order as designated by _settings.
+    """
+
+    # Block...  Assign ship_method_ based on custom shipping_lines settings.
+    by_shipping_lines = _settings.ship_method_pointers['by_shipping_lines']
+    if _order['shipping_lines']:
+        # Different settings can use different types; currently accepting 'code' and 'title'.
+        for type in by_shipping_lines:
+            # Loop through each pointer set in each type.
+            for key, value in by_shipping_lines[type].items():
+                # First if handles (michaelhyatt) custom function.
+                if key.startswith('&check_subtotal_price&'):
+                    key, use_default = customCheckSubtotalPrice(key, _order)
+                    if use_default:  break
+                # Final comparison to set ship_method_.
+                if _order['shipping_lines'][0][type] == key:
+                    _ship_method = value
+                    break
+
+    return _ship_method
+
+
+
+def getShipMethodByCountry(_ship_method, _settings, _order):
+    """
+    input:  _ship_method =  Previously designated ship_method to be maintained if get by condition
+                            is not met.
+            _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+    output: Return _ship_method, shipping method of the _order as designated by _settings.
+    """
+
+    by_country = _settings.ship_method_pointers['by_country']
+    for country, method in by_country.items():
+        if _order['shipping_address']['country'] == country:
+            _ship_method = method
+            break
+
+    return _ship_method
+
+
+
+def getShipMethodByProvince(_ship_method, _settings, _order):
+    """
+    input:  _ship_method =  Previously designated ship_method to be maintained if get by condition
+                            is not met.
+            _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+            _order =    A Shopify Order object containing all order information.
+    output: Return _ship_method, shipping method of the _order as designated by _settings.
+    """
+
+    by_province = _settings.ship_method_pointers['by_province']
+    for province, method in by_province.items():
+        if _order['shipping_address']['province'] == province:
+            _ship_method = method
+            break
+
+    return _ship_method
+
+
+
+def getShipMethodByNameAndEmail(_ship_method, _settings, _order):
+    """
+    input:  _ship_method =  Previously designated ship_method to be maintained if get by condition
+                            is not met.
+            _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+            _order =    A Shopify Order object containing all order information.
+    output: Return _ship_method, shipping method of the _order as designated by _settings.
+    """
+
+    by_name_and_email = _settings.ship_method_pointers['by_name_and_email']
+    for pointer in by_name_and_email:
+        same_name = _order['shipping_address']['name'] == pointer['name'] if pointer['name'] else True
+        same_email = _order['contact_email'] == pointer['email'] if pointer['email'] else True
+        if same_name and same_email:  _ship_method = pointer['ship_method']
+
+    return _ship_method
+
+
+
+# def getShipMethodByParts(_ship_method, _settings, _order):
+#     """
+#     input:  _ship_method =
+#             _settings =
+#             _order =
+#     output:
+#     """
+#
+#     by_parts = _settings.ship_method_pointers['by_parts']
+#
+#     return _ship_method
+
+
+
 def getShipMethod(_settings, _order):
     """
     input:  _settings = A Shopify settings module in a json like syntax.  This method requires
-                        access to shipping_pointers for ship_method_ assignment.
+                        access to ship_method_pointers for ship_method_ assignment.
             _order =    A Shopify Order object containing all order information.
     output: Return ship_method_, a string representing the order's designated shipping method
             assigned by conditions from _settings and values from _order.
     """
 
-    # Assign ship_method_ value based on default dom/int settings.
-    default_pointers = _settings.shipping_pointers['by_default']
-    if _order['shipping_address']['country'] == 'United States':
-        ship_method_ = default_pointers['dom']
-    else:
-        ship_method_ = default_pointers['int']
+    ship_method_ = getShipMethodByDefault(_settings, _order)
 
-    # Block...  Assign ship_method_ based on custom shipping_lines settings.
-    if 'by_shipping_lines' in _settings.shipping_pointers.keys():
-        by_shipping_lines = _settings.shipping_pointers['by_shipping_lines']
-        if _order['shipping_lines']:
-            # Different settings can use different types; currently accepting 'code' and 'title'.
-            for type in by_shipping_lines:
-                # Loop through each pointer set in each type.
-                for key, value in by_shipping_lines[type].items():
-                    # First if handles (michaelhyatt) custom function.
-                    if key.startswith('&check_subtotal_price&'):
-                        key, use_default = customCheckSubtotalPrice(key, _order)
-                        if use_default:  break
-                    # Final comparison to set ship_method_.
-                    if _order['shipping_lines'][0][type] == key:
-                        ship_method_ = value
-                        break
+    for pointer_group in _settings.ship_method_pointers['sequence']:
+        if pointer_group == 'by_default':  continue
+        elif pointer_group == 'by_shipping_lines':
+            ship_method_ = getShipMethodByShippingLines(ship_method_, _settings, _order)
+        elif pointer_group == 'by_country':
+            ship_method_ = getShipMethodByCountry(ship_method_, _settings, _order)
+        elif pointer_group == 'by_province':
+            ship_method_ = getShipMethodByProvince(ship_method_, _settings, _order)
+        elif pointer_group == 'by_name_and_email':
+            ship_method_ = getShipMethodByNameAndEmail(ship_method_, _settings, _order)
+        # elif pointer_group == 'by_parts':
+        #     ship_method_ = getShipMethodByParts(ship_method_, _settings, _order)
 
-    # BLOCK...  Assign ship_method_ based on by_parts pointers.
-    if 'by_parts' in _settings.shipping_pointers.keys():
-        by_parts = _settings.shipping_pointers['by_parts']
 
     return ship_method_
+
+
+
+def getOtherShipInfo(_ship_info, _settings, _order):
+    """
+    input:  _ship_info = Previously designated ship_info, to be maintained and added to for return.
+            _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+            _order =    A Shopify Order object containing all order information.
+    output: Return _ship_info, from argued _ship_info, modifed with designations from
+            _settings.ship_info_pointers.
+    """
+
+    for key, value in _settings.ship_info_pointers.items():
+        # Navigate through _order json with drilldown sequence of value.
+        pointing = _order
+        for value_step in value:  pointing = pointing[value_step]
+        # Dynamically update _ship_info.
+        _ship_info[key] = pointing
+
+    return _ship_info
 
 
 
@@ -204,6 +335,7 @@ def getShipInfoFromOrder(_settings, _order):
     ]
     ship_info_ = { key: '' for key in ship_info_keys }
 
+    # Standard ship_info values retrieval.
     ship_info_['CompanyID'] =   _settings.credentials['company_id']
     ship_info_['inDate'] =      datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     ship_info_['ReqBy'] =       'Shopify'
@@ -216,14 +348,17 @@ def getShipInfoFromOrder(_settings, _order):
     ship_info_['Zip'] =         _order['shipping_address']['zip']
     ship_info_['Country'] =     _order['shipping_address']['country']
     ship_info_['Phone'] =       _order['shipping_address']['phone']
-    ship_info_['ShipMethod'] =  getShipMethod(_settings, _order)
-    ship_info_['ShipNumber'] =  _order['order_number']
     ship_info_['Email'] =       _order['contact_email']
-    ship_info_['userdefval2'] = _order['id']
+    # Shop specific ship_info values retrieval.
+    ship_info_['ShipMethod'] =  getShipMethod(_settings, _order)
+    ship_info_ = getOtherShipInfo(ship_info_, _settings, _order)
 
-    # Convert None values to empty strings.
-    for k, v in ship_info_.items():
-        if v == None:  ship_info_[k] = ''
+    # Convert None values to empty strings, remove specified chars, and remove non-ascii chars.
+    remove_chars = '\'"[]#'
+    for key in ship_info_:
+        if ship_info_[key] == None:  ship_info_[key] = ''
+        for char in remove_chars:  ship_info_[key] = str(ship_info_[key]).replace(char, '')
+        ship_info_[key] = ship_info_[key].encode().decode('ascii', 'ignore')
 
     return ship_info_
 
@@ -263,8 +398,11 @@ def getItemsWeFulfillFromOrder(_settings, _order):
 
 def convertOrdersToDiskFormat(_settings, _orders):
     """
-    input:
-    output:
+    input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
+                        access to credentials to get information for populating ship_info_.
+            _orders =   A list of Shopify Order objects containing all order information.
+    output: Return disk_orders_.  Take _orders (in shop format), using conditional modifications
+            from _settings, alter the data into disk_orders_ (disk format) for submission.
     """
 
     disk_orders_ = []
@@ -273,6 +411,13 @@ def convertOrdersToDiskFormat(_settings, _orders):
         disk_order['ship_info'] = getShipInfoFromOrder(_settings, order)
         # disk_order['items'] = getItemsWeFulfillFromOrder(_settings, order)
         disk_orders_ += [disk_order]
+
+        # print("\n", disk_order, "\n")
+        # print("\n\n\n<><><>   ORDER   <><><>")
+        # print(json.dumps(order, indent=4, sort_keys=True))
+        print("\n\n\n<><><>   DISK ORDER   <><><>")
+        print(json.dumps(disk_order, indent=4, sort_keys=True))
+        # print(disk_order)
 
     return disk_orders_
 
