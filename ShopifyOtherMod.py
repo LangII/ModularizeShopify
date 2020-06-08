@@ -154,6 +154,13 @@ def prettyPrintShopProducts(_products):
 
 
 
+def prettyPrintShopOrder(_shop_order):
+    """ Quick indented json print. """
+
+    print(json.dumps(_shop_order, sort_keys=True, indent=4))
+
+
+
 ####################################################################################################
                                                                                  ###   TESTING   ###
                                                                                  ###################

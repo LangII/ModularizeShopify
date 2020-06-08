@@ -3,6 +3,7 @@
 
 from datetime import datetime, timedelta
 from copy import deepcopy
+import json
 
 from Required import Connections
 
@@ -19,9 +20,7 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
             _orders =
             _cart =
             _days_ago =
-    output: Return orders_, a list of orders from _orders that are not duplicates of previous
-            orders found in tblXmlShipData based on userdefval2.  If dupes are found they are
-            returned as a list in dupes_.
+    output: Return (not_dupes_, dupes_),
     """
 
     # Ensure _cart is correctly argued.
@@ -50,8 +49,8 @@ def dupeCheckXmlShipUserdefval2(_company_id, _orders, _cart, _days_ago=0, _print
     for order in _orders:
         # Update userdefval2 based on _cart.
         if _cart == 'Shopify':
-            if _print:  print(">>>     checking order {}...  ".format(order.id), end='')
-            userdefval2 = order.id
+            if _print:  print(">>>     checking order {}...  ".format(order['id']), end='')
+            userdefval2 = order['id']
         # Basic conditionals checking if userdefval2 is in prev_userdefval2s and assigning order
         # accordingly.
         if userdefval2 not in prev_userdefval2s:
