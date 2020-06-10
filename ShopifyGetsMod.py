@@ -16,6 +16,9 @@ https://github.com/Shopify/shopify_python_api
 - python shopify github repo
 - referenced by Parker
 
+https://shopify.dev/docs/admin-api/rest/reference/orders/order
+- shopify order doc
+
 """
 
 ####################################################################################################
@@ -33,17 +36,31 @@ import json
 
 import shopify
 
+import ShopifyCustomMod as ShopCustom
+
 
 
 ####################################################################################################
                                                                                  ###   METHODS   ###
                                                                                  ###################
 
+
+
+def getSingleShopOrderById(_id):
+    """ Quick retrieval of single order by id. """
+
+    order_ = shopify.Order.find(int(_id))
+    order_ = json.loads(order.to_json().decode('ascii', 'ignore'))['order']
+
+    return order_
+
+
+
 def getRecentShopOrders(_settings, _print=False):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to get_recent_orders_args to override default args if needed.
-            _print =    Bool determining whether actions are printed to console (for debug).
+            _print = Bool determining whether actions are printed to console (for debug).
     output: Return all_orders_, list of all current shop's orders based on argued conditions.
     """
 
@@ -72,7 +89,7 @@ def getRecentShopOrders(_settings, _print=False):
         )
         # Convert orders to json format.
         for i in range(len(orders)):
-            orders[i] = json.loads(orders[i].to_json().decode('utf-8'))['order']
+            orders[i] = json.loads(orders[i].to_json().decode('ascii', 'ignore'))['order']
         # Arguable print for debugging.
         if _print:
             batch_print = "\n>>> in batch {}...  retrieved {} orders...\n>>> order ids:\n{}"
@@ -93,8 +110,8 @@ def weFulfillItemsByIdType(_settings, _orders, _print=False):
     input:  _settings = A Shopify settings module in a json like syntax.  This method requires
                         access to sku_pointers and product_id_pointers to verify if items in _order
                         are items we fulfill.
-            _orders =    A list of Shopify Order objects containing all order information.
-            _print =    Bool determining whether actions are printed to console (for debug).
+            _orders = A list of Shopify Order objects containing all order information.
+            _print = Bool determining whether actions are printed to console (for debug).
     output: Return we_fulfill_ and we_do_not_fulfill_, lists of sorted orders from _orders.  To
             fulfill or not to fulfill determined based on items in orders by _id_type.
     Shopify order reference:  https://shopify.dev/docs/admin-api/rest/reference/orders/order
@@ -135,7 +152,7 @@ def getShipMethodByDefault(_settings, _order):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return ship_method_, shipping method of the _order as designated by _settings.
     """
 
@@ -150,8 +167,9 @@ def getShipMethodByDefault(_settings, _order):
 
 
 
-def customCheckSubtotalPrice(_key, _order):
+def checkSubtotalPrice(_key, _order):
     """
+    (used in getShipMethodByShippingLines() from ShopifyGetsMod.py)
     input:  _key = Key from shop_settings.ship_method_pointers['by_shipping_lines'][''] dict.
             _order = A Shopify Order object containing all order information.
     output: Return (key_, use_default_).  key_ is a modified _key with && flag removed.
@@ -173,7 +191,7 @@ def getShipMethodByShippingLines(_ship_method, _settings, _order):
                             is not met.
             _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return _ship_method, shipping method of the _order as designated by _settings.
     """
 
@@ -186,7 +204,7 @@ def getShipMethodByShippingLines(_ship_method, _settings, _order):
             for key, value in by_shipping_lines[type].items():
                 # First if handles (michaelhyatt) custom function.
                 if key.startswith('&check_subtotal_price&'):
-                    key, use_default = customCheckSubtotalPrice(key, _order)
+                    key, use_default = ShopCustom.checkSubtotalPrice(key, _order)
                     if use_default:  break
                 # Final comparison to set ship_method_.
                 if _order['shipping_lines'][0][type] == key:
@@ -222,7 +240,7 @@ def getShipMethodByProvince(_ship_method, _settings, _order):
                             is not met.
             _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return _ship_method, shipping method of the _order as designated by _settings.
     """
 
@@ -242,7 +260,7 @@ def getShipMethodByNameAndEmail(_ship_method, _settings, _order):
                             is not met.
             _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return _ship_method, shipping method of the _order as designated by _settings.
     """
 
@@ -274,7 +292,7 @@ def getShipMethod(_settings, _order):
     """
     input:  _settings = A Shopify settings module in a json like syntax.  This method requires
                         access to ship_method_pointers for ship_method_ assignment.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return ship_method_, a string representing the order's designated shipping method
             assigned by conditions from _settings and values from _order.
     """
@@ -304,12 +322,18 @@ def getOtherShipInfo(_ship_info, _settings, _order):
     input:  _ship_info = Previously designated ship_info, to be maintained and added to for return.
             _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return _ship_info, from argued _ship_info, modifed with designations from
             _settings.ship_info_pointers.
     """
 
     for key, value in _settings.ship_info_pointers.items():
+
+        # First if handles (michaelhyatt) custom function.
+        if value[0].startswith('&check_tags_for_subscription&'):
+            _ship_info[key] = ShopCustom.checkTagsForSubscription(_order)
+            continue
+
         # Navigate through _order json with drilldown sequence of value.
         pointing = _order
         for value_step in value:  pointing = pointing[value_step]
@@ -324,7 +348,7 @@ def getShipInfoFromOrder(_settings, _order):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return ship_info_, a dict containing relevant data of the _order's shipping information.
     Shopify order reference:  https://shopify.dev/docs/admin-api/rest/reference/orders/order
     """
@@ -369,7 +393,7 @@ def getItemsWeFulfillFromOrder(_settings, _order):
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to sku_pointers an product_id_pointers for shop id to disk id
                         referencing.
-            _order =    A Shopify Order object containing all order information.
+            _order = A Shopify Order object containing all order information.
     output: Return items_to_fulfill_, dict with keys as disk_part_numbers and values as quantities
             of said part numbers.  Each disk_part_number is referenced from _order by it's pointer
             in _settings and each quantity is multiplied through the pointer as well.
@@ -400,7 +424,7 @@ def convertOrdersToDiskFormat(_settings, _orders):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials to get information for populating ship_info_.
-            _orders =   A list of Shopify Order objects containing all order information.
+            _orders = A list of Shopify Order objects containing all order information.
     output: Return disk_orders_.  Take _orders (in shop format), using conditional modifications
             from _settings, alter the data into disk_orders_ (disk format) for submission.
     """
@@ -413,11 +437,13 @@ def convertOrdersToDiskFormat(_settings, _orders):
         disk_orders_ += [disk_order]
 
         # print("\n", disk_order, "\n")
-        # print("\n\n\n<><><>   ORDER   <><><>")
-        # print(json.dumps(order, indent=4, sort_keys=True))
+        print("\n\n\n<><><>   ORDER   <><><>")
+        print(json.dumps(order, indent=4, sort_keys=True))
         print("\n\n\n<><><>   DISK ORDER   <><><>")
         print(json.dumps(disk_order, indent=4, sort_keys=True))
         # print(disk_order)
+
+        exit()
 
     return disk_orders_
 
