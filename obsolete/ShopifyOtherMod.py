@@ -69,7 +69,7 @@ def openShop(_settings, _print=False):
     """
     input:  _settings = A Shopify settings module in a json similar syntax.  This method requires
                         access to credentials for the Shopify API call.
-            _print =    Bool determining whether actions are printed to console (for debug).
+            _print = Bool determining whether actions are printed to console (for debug).
     output: Return 'shop_', Shopify object identifier.
     """
 
@@ -82,7 +82,7 @@ def openShop(_settings, _print=False):
     creds_list = [ shop_creds[k] for k in ['api_key', 'password', 'shop_name', 'api_version'] ]
     shopify.ShopifyResource.set_site(url_template.format(*creds_list))
     shop_ = shopify.Shop.current()
-    if _print:  print("\n>>> you now have API access to the *{}* Shopify shop".format(shop_.name))
+    if _print:  print(">>> you now have API access to the *{}* Shopify shop".format(shop_.name))
 
     return shop_
 

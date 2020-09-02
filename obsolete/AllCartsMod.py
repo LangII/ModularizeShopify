@@ -1,6 +1,7 @@
 
 
 
+import sys
 from datetime import datetime, timedelta
 from copy import deepcopy
 import json
@@ -11,6 +12,12 @@ from Required import Connections
 
 conn = Connections.connect()
 cur = conn.cursor()
+
+
+
+def getScriptName():
+    """ Return name of initially ran script. """
+    return sys.argv[0][sys.argv[0].rfind('\\') + 1:]
 
 
 
@@ -87,15 +94,15 @@ def makeAllTest(_orders, _trim_to=0):
 
 def insertIntoXmlShipData(_orders, _print=False):
     """
-    input:  _orders =
-            _print =
+    input:  _orders = List of orders in disk format to be submitted to tblXmlShipData.
+            _print = Bool determining whether actions are printed to console (for debug).
     output:
     """
 
     # Build ship_info_cols, sku_qty_cols, then concatenate for all_cols.
     ship_info_cols = [
         'CompanyID', 'inDate', 'ReqBy', 'Company', 'Attn', 'Addy1', 'Addy2', 'City', 'State', 'Zip',
-        'Country', 'Phone', 'ShipMethod', 'ShipNumber', 'Email', 'userdefval2'
+        'Country', 'Phone', 'ShipMethod', 'ShipNumber', 'Email', 'userdefval2', 'extraField1'
     ]
     sku_qty_cols = ['sku', 'qty']
     for i in range(2, 61):  sku_qty_cols += ['sku{}'.format(i), 'qty{}'.format(i)]
@@ -139,20 +146,30 @@ def insertIntoXmlShipData(_orders, _print=False):
 
 
 
-def printDiskOrdersSummary(_orders):
+def printDiskOrdersSummary(_orders, _id_ref='userdefval2'):
     """
     input:  _orders =
     output:
     """
 
-    order_print = ">>>     | Attn: {} | Items: {}"
+    order_print = ">>>     ID:  {}    Attn: {}    Items: {}"
 
     if not isinstance(_orders, (list, tuple)):
+        id_w = len(_orders['ship_info'][_id_ref])
         attn_w = len(_orders['ship_info']['Attn'])
-        print_largs = [_orders['ship_info']['Attn'].ljust(attn_w), _orders['items']]
+        print_largs = [
+            _orders['ship_info'][_id_ref].ljust(id_w),
+            _orders['ship_info']['Attn'].ljust(attn_w),
+            _orders['items']
+        ]
         print(order_print.format(*print_largs))
     else:
+        id_w = max([ len(order['ship_info'][_id_ref]) for order in _orders ])
         attn_w = max([ len(order['ship_info']['Attn']) for order in _orders ])
         for order in _orders:
-            print_largs = [order['ship_info']['Attn'].ljust(attn_w), order['items']]
+            print_largs = [
+                order['ship_info'][_id_ref].ljust(id_w),
+                order['ship_info']['Attn'].ljust(attn_w),
+                order['items']
+            ]
             print(order_print.format(*print_largs))
